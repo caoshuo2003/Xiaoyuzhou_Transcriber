@@ -1,0 +1,3 @@
+[tools]
+ffmpeg = "latest"
+python = "3.12"

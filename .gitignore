@@ -1,3 +1,30 @@
+# 虚拟环境
 .venv/
+
+# 下载的原始音频（临时文件，体积大）
 downloads/
-.mise.toml
+
+# 转译输出（可按需取消注释保留）
+output/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# 配置文件
+mise.toml
+
+# IDE
+.vscode/
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+
+models/

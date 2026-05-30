@@ -1,0 +1,39 @@
+# ============================================================
+# 小宇宙播客转译器 - 配置文件
+# ============================================================
+
+[xiaoyuzhou]
+# 小宇宙 Cookie（用于需要登录的资源，可选）
+cookie = ""
+
+[storage]
+# 下载目录（相对于项目根目录）
+download_dir = "downloads"
+# 输出目录（相对于项目根目录）
+output_dir = "output"
+
+[audio]
+# 音频采样率（Hz），Whisper 默认使用 16000
+sample_rate = 16000
+# 音频声道数，1=单声道
+channels = 1
+
+[whisper]
+# 模型大小: tiny, base, small, medium, large, large-v2, large-v3
+model_size = "medium"
+# 模型存储路径（可选，留空使用默认缓存目录）
+model_dir = ""
+# 推理设备: cpu, cuda, auto
+device = "auto"
+# 计算精度: float16, int8, int8_float16
+compute_type = "int8_float16"
+
+[transcription]
+# 输出文件语言（en, zh, auto 自动检测）
+language = "auto"
+# 是否生成带时间戳的字幕（true/false）
+timestamps = true
+# 输出文本的最大行宽（字符数），用于自动换行
+max_line_width = 80
+# 输出格式: txt, srt, vtt, json
+output_format = "txt"

@@ -1,0 +1,8 @@
+# 音频下载
+requests>=2.31.0
+
+# 语音识别引擎（faster-whisper 比原版快 4x，内存占用更低）
+faster-whisper>=1.0.3
+
+# 配置文件解析
+tomli>=2.0.1; python_version < "3.11"

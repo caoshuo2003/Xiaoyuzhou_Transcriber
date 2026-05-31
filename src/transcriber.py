@@ -12,6 +12,8 @@
 import json
 import math
 import os
+import struct
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -40,6 +42,46 @@ def _format_timestamp(seconds: float, fmt: str = "srt") -> str:
         if hours > 0:
             return f"{hours:02d}:{minutes:02d}:{secs:02d}"
         return f"{minutes:02d}:{secs:02d}"
+
+
+def _get_wav_duration(wav_path: Path) -> float:
+    """读取 WAV 文件头获取音频时长（秒）。
+
+    Args:
+        wav_path: WAV 文件路径。
+
+    Returns:
+        音频时长（秒），读取失败返回 0。
+    """
+    try:
+        with open(wav_path, "rb") as f:
+            # 检查 RIFF 头
+            if f.read(4) != b"RIFF":
+                return 0
+            f.read(4)  # 文件大小
+            if f.read(4) != b"WAVE":
+                return 0
+            # 遍历 chunk 找到 fmt 和 data
+            sample_rate = 0
+            channels = 1
+            data_size = 0
+            while True:
+                chunk_id = f.read(4)
+                chunk_size = struct.unpack("<I", f.read(4))[0]
+                if chunk_id == b"fmt ":
+                    fmt_data = f.read(chunk_size)
+                    channels = struct.unpack("<H", fmt_data[2:4])[0]
+                    sample_rate = struct.unpack("<I", fmt_data[4:8])[0]
+                elif chunk_id == b"data":
+                    data_size = chunk_size
+                    break
+                else:
+                    f.seek(chunk_size, 1)
+            if sample_rate > 0 and data_size > 0:
+                return data_size / (sample_rate * channels * 2)  # 16-bit = 2 bytes per sample
+    except Exception:
+        pass
+    return 0
 
 
 def _load_model(model_size: str, device: str, compute_type: str, model_dir: str = ""):
@@ -128,14 +170,39 @@ def transcribe(
     detected_lang = info.language
     print(f"检测到语言: {detected_lang} (概率: {info.language_probability:.2f})")
 
+    # 获取音频总时长用于进度展示
+    total_duration = _get_wav_duration(audio_path) if audio_path.suffix.lower() == ".wav" else 0
+
     results = []
+    count = 0
     for seg in segments:
         results.append({
             "start": round(seg.start, 3),
             "end": round(seg.end, 3),
             "text": seg.text.strip(),
         })
+        count += 1
 
+        # 进度展示
+        current_ts = _format_timestamp(seg.end, "plain")
+        if total_duration > 0:
+            pct = min(seg.end / total_duration * 100, 100)
+            bar_width = 40
+            filled = int(pct / 100 * bar_width)
+            bar = "█" * filled + "░" * (bar_width - filled)
+            sys.stdout.write(
+                f"\r  [{bar}] {pct:5.1f}%  [{current_ts}]  "
+                f"第{count}段  {seg.text.strip()[:50]}"
+            )
+        else:
+            total_ts = ""
+            sys.stdout.write(
+                f"\r  [{current_ts}]  第{count}段  {seg.text.strip()[:50]}"
+            )
+        sys.stdout.flush()
+
+    sys.stdout.write("\n")
+    sys.stdout.flush()
     print(f"转译完成，共 {len(results)} 个段落。")
     return results
 

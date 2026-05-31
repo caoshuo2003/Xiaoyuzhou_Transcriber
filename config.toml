@@ -3,6 +3,9 @@
 # ============================================================
 
 [xiaoyuzhou]
+# 小宇宙 episode 页面链接（程序会自动从页面提取音频资源和标题）
+# 也可以作为命令行参数传入：python run.py https://www.xiaoyuzhoufm.com/episode/xxx
+episode_url = ""
 # 小宇宙 Cookie（用于需要登录的资源，可选）
 cookie = ""
 

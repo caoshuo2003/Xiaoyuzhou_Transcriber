@@ -3,7 +3,7 @@
 
 支持两种输入：
   1. 直接传入 MP3 URL（如 media.xyzcdn.net 的链接）
-  2. 传入小宇宙 episode 链接，自动提取音频 URL
+  2. 传入小宇宙 episode 链接，自动提取音频 URL 和标题
 """
 
 import hashlib
@@ -15,21 +15,60 @@ from urllib.parse import urlparse
 import requests
 
 
-def _slugify(name: str, max_len: int = 60) -> str:
+def slugify(name: str, max_len: int = 60) -> str:
     """将标题转换为安全的文件名。"""
     name = re.sub(r"[^\w\s-]", "", name).strip()
     name = re.sub(r"[-\s]+", "-", name)
     return name[:max_len].strip("-")
 
 
-def _extract_audio_url(episode_url: str) -> str | None:
-    """从小宇宙 episode 页面提取音频 URL。
+def extract_episode_info(episode_url: str, timeout: int = 30) -> dict:
+    """从小宇宙 episode 页面提取音频 URL 和标题。
 
-    目前需要手动传入音频 URL；后续可集成 API 自动提取。
-    如果你通过浏览器开发者工具拿到了音频直链，可以直接传直链给 download_audio()。
+    通过解析页面 HTML 中的 og:audio 和 og:title meta 标签获取信息。
+
+    Args:
+        episode_url: 小宇宙 episode 页面链接（如 https://www.xiaoyuzhoufm.com/episode/xxx）。
+        timeout: 请求超时时间（秒）。
+
+    Returns:
+        {"audio_url": str, "title": str} 或 None（提取失败时）。
+
+    Raises:
+        requests.HTTPError: 页面请求失败时抛出。
     """
-    # 暂时返回 None，保留接口将来扩展
-    return None
+    print(f"正在访问页面: {episode_url}")
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/125.0.0.0 Safari/537.36"
+        )
+    }
+    resp = requests.get(episode_url, headers=headers, timeout=timeout)
+    resp.raise_for_status()
+    html = resp.text
+
+    # 提取音频 URL（og:audio meta 标签）
+    audio_match = re.search(
+        r'<meta\s+property="og:audio"\s+content="([^"]+)"', html
+    )
+    if not audio_match:
+        print("错误: 未在页面中找到音频资源链接。")
+        return None
+
+    audio_url = audio_match.group(1)
+    print(f"找到音频资源: {audio_url}")
+
+    # 提取标题（og:title meta 标签）
+    title_match = re.search(
+        r'<meta\s+property="og:title"\s+content="([^"]+)"', html
+    )
+    title = title_match.group(1) if title_match else "episode"
+    print(f"播客标题: {title}")
+
+    return {"audio_url": audio_url, "title": title}
 
 
 def download_audio(
@@ -60,7 +99,7 @@ def download_audio(
     filename = Path(parsed.path).name or "audio.mp3"
 
     if title:
-        filename = f"{_slugify(title)}-{filename}"
+        filename = f"{slugify(title)}-{filename}"
 
     output_path = save_path / filename
 
